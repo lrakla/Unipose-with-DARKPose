@@ -115,7 +115,7 @@ class ResNet(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, input):
-        input.cuda()
+        input = input.cuda()
         x = self.conv1(input)
         x = self.bn1(x)
         x = self.relu(x)

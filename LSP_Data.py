@@ -9,6 +9,8 @@ from PIL import Image
 import cv2
 import math
 import Mytransforms
+import matplotlib.pyplot as plt
+import torch
 #from utils.utils import PAF as PAF
 
 
@@ -27,9 +29,9 @@ def read_mat_file(mode, root_dir, img_list):
         mode (str): 'lsp' or 'lspet'
         return: three list: key_points list , centers list and scales list
         Notice:
-            lsp_dataset differ from lspet dataset
+        lsp_dataset differ from lspet dataset
     """
-    root_dir = 'project/data'
+    root_dir = 'Unipose-with-DARKPose/data'
     mat_arr = scipy.io.loadmat(os.path.join(root_dir, 'joints.mat'))['joints'][:,:,:1000]
     # lspnet (14,3,10000)
     if mode == 'lspet':
@@ -47,7 +49,7 @@ def read_mat_file(mode, root_dir, img_list):
         im = Image.open(img_list[idx])
         w = im.size[0]
         h = im.size[1]
-        # lsp and lspet dataset doesn't exist groundtruth of center points
+        # lsp and lspet dataset doesn't have groundtruth of center points
         center_x = (lms[idx][0][lms[idx][0] < w].max() +
                     lms[idx][0][lms[idx][0] > 0].min()) / 2
         center_y = (lms[idx][1][lms[idx][1] < h].max() +
@@ -201,7 +203,8 @@ class LSP_Data(data.Dataset):
         self.stride      = stride
         self.transformer = transformer
         self.sigma       = sigma
-        self.bodyParts   = [[13, 12], [12, 9], [12, 8], [8, 7], [9, 10], [7, 6], [10, 11], [12, 3], [2, 3], [2, 1], [1, 0], [3, 4], [4, 5]]
+        self.bodyParts   = [[13, 12], [12, 9], [12, 8], [8, 7], [9, 10], [7, 6], \
+            [10, 11], [12, 3], [2, 3], [2, 1], [1, 0], [3, 4], [4, 5]]
 
 
     def __getitem__(self, index):
@@ -231,10 +234,6 @@ class LSP_Data(data.Dataset):
             heatmap[:, :, i + 1] = heat_map
 
         heatmap[:, :, 0] = 1.0 - np.max(heatmap[:, :, 1:], axis=2)  # for background
-        
-        for i in range(15):
-            name = f"hm{i}.png"
-            cv2.imwrite(name,np.uint8(heatmap[:,:,i]))
         centermap = np.zeros((height, width, 1), dtype=np.float32)
         center_map = guassian_kernel(size_h=height, size_w=width, center_x=center[0], center_y=center[1], sigma=3)
         center_map[center_map > 1] = 1
@@ -248,13 +247,17 @@ class LSP_Data(data.Dataset):
         # limbsMap  = Mytransforms.to_tensor(limbsMap)
         box       = Mytransforms.to_tensor(box)
         
-        return img, heatmap, centermap, img_path, 0, box
+        return img, heatmap, centermap, img_path #, 0, box
 
 
     def __len__(self):
         return len(self.img_list)
 
 if __name__ == "__main__":
-    img, heatmap, centermap, img_path, _, box = LSP_Data('lsp', 'project/data/train', 3, 8, transformer=
-    Mytransforms.Compose([Mytransforms.RandomHorizontalFlip(),]))[1]
-    print(heatmap)
+    img, heatmap, centermap, img_path = LSP_Data('lsp', 'Unipose-with-DARKPose/data/train', 3, 8, transformer=
+    Mytransforms.Compose([Mytransforms.RandomHorizontalFlip(),]))
+    hm = torch.zeros((heatmap.shape[1],heatmap.shape[2]))
+    for i in range(15):
+        hm += heatmap[i,:,:]
+    plt.imsave("hm.png",np.uint8(hm))
+

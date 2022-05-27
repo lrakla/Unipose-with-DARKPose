@@ -91,10 +91,10 @@ def get_kpts(maps, img_h = 368.0, img_w = 368.0):
 
     # maps (1,15,46,46)
     maps = maps.clone().cpu().data.numpy()
-    map_6 = maps[0]
+    map_6 = maps[0] # 15,46,46
 
     kpts = []
-    for m in map_6[1:]:
+    for m in map_6[1:]: #1,368,368
         h, w = np.unravel_index(m.argmax(), m.shape)
         x = int(w * img_w / m.shape[1])
         y = int(h * img_h / m.shape[0])
@@ -102,7 +102,7 @@ def get_kpts(maps, img_h = 368.0, img_w = 368.0):
     return kpts
 
 
-def draw_paint(im, kpts, mapNumber, epoch, model_arch, dataset):
+def draw_paint(im, kpts, mapNumber, epoch, model_arch, dataset,img_path):
 
            #       RED           GREEN           RED          YELLOW          YELLOW          PINK          GREEN
     colors = [[000,000,255], [000,255,000], [000,000,255], [255,255,000], [255,255,000], [255,000,255], [000,255,000],\
@@ -110,8 +110,10 @@ def draw_paint(im, kpts, mapNumber, epoch, model_arch, dataset):
            #       BLUE          YELLOW          PINK          GREEN          GREEN           RED          YELLOW           BLUE
 
     if dataset == "LSP":
-        limbSeq = [[13, 12], [12, 9], [12, 8], [9, 10], [8, 7], [10,11], [7, 6], [12, 3],\
-                    [12, 2], [ 2, 1], [ 1, 0], [ 3, 4], [4,  5], [15,16], [16,18], [17,18], [15,17]]
+        # limbSeq = [[13, 12], [12, 9], [12, 8], [9, 10], [8, 7], [10,11], [7, 6], [12, 3],\
+        #             [12, 2], [ 2, 1], [ 1, 0], [ 3, 4], [4,  5], [15,16], [16,18], [17,18], [15,17]]
+        limbSeq = [[13, 12], [12, 9], [12, 8], [8, 7], [9, 10], [7, 6], [10, 11], [12, 3],\
+             [2, 3], [2, 1], [1, 0], [3, 4], [4, 5]]
         kpts[15][0] = kpts[15][0]  - 25
         kpts[15][1] = kpts[15][1]  - 50
         kpts[16][0] = kpts[16][0]  - 25
@@ -121,7 +123,7 @@ def draw_paint(im, kpts, mapNumber, epoch, model_arch, dataset):
         kpts[18][0] = kpts[18][0] + 25
         kpts[18][1] = kpts[18][1] + 50
 
-    # im = cv2.resize(cv2.imread(img_path),(368,368))
+    im = cv2.resize(cv2.imread(img_path[0]),(368,368))
     # draw points
     for k in kpts:
         x = k[0]
@@ -151,7 +153,7 @@ def draw_paint(im, kpts, mapNumber, epoch, model_arch, dataset):
 
         im = cv2.addWeighted(im, 0.2, cur_im, 0.8, 0)
 
-    cv2.imwrite('samples/WASPpose/Pose/'+str(mapNumber)+'.png', im)
+    cv2.imwrite('WASPose'+str(mapNumber)+'.png', im)
 
 
 def guassian_kernel(size_w, size_h, center_x, center_y, sigma):
@@ -252,7 +254,7 @@ def getOutImages(heat, input_var, img_path, outName):
     for i in range(15):
         heatmap = cv2.applyColorMap(np.uint8(255*heat[:,:,i]), cv2.COLORMAP_JET)
         im_heat  = cv2.addWeighted(im, 0.6, heatmap, 0.4, 0)
-        cv2.imwrite('samples/WASPpose/heat/'+outName+'_'+str(i)+'.png', im_heat)
+        cv2.imwrite('\Waspose'+outName+'_'+str(i)+'.png', im_heat)
 
 
 

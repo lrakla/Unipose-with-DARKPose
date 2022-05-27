@@ -95,7 +95,7 @@ class Trainer(object):
 
 		# Print model summary and metrics
 		dump_input = torch.rand(([1, 3, 368, 368]))
-		print(get_model_summary(self.model, dump_input))
+		#print(get_model_summary(self.model, dump_input))
 
 	def training(self, epoch):
 		train_loss = 0.0
@@ -180,10 +180,10 @@ class Trainer(object):
 		PCKhAvg = PCKh.sum()/(self.numClasses+1)
 		PCKAvg  =  PCK.sum()/(self.numClasses+1)
 
-		if mAP > self.isBest:
-			self.isBest = mAP
-			save_checkpoint({'state_dict': self.model.state_dict()}, self.isBest, self.args.model_name)
-			print("Model saved to "+self.args.model_name)
+		# if mAP > self.isBest:
+		# 	self.isBest = mAP
+		# 	save_checkpoint({'state_dict': self.model.state_dict()}, self.isBest, self.args.model_name)
+		# 	print("Model saved to ",self.args.model_name)
 
 		if mPCKh > self.bestPCKh:
 			self.bestPCKh = mPCKh
@@ -200,7 +200,7 @@ class Trainer(object):
 
 		for idx in range(1):
 			print(idx,"/",2000)
-			img_path = 'project/data/train/im0001.jpg'
+			img_path = 'Unipose-with-DARKPose/data/train/images/im0001.jpg'
 
 			center   = [184, 184]
 
@@ -223,7 +223,7 @@ class Trainer(object):
 			heat = F.interpolate(heat, size=input_var.size()[2:], mode='bilinear', align_corners=True)
 
 			kpts = get_kpts(heat, img_h=368.0, img_w=368.0)
-			draw_paint(img_path, kpts, idx, epoch, self.model_arch, self.dataset)
+			draw_paint(img_path, kpts, idx, epoch, self.model_arch, self.dataset,img_path)
 
 			heat = heat.detach().cpu().numpy()
 
@@ -243,33 +243,33 @@ class Trainer(object):
 			for i in range(self.numClasses+1):
 				heatmap = cv2.applyColorMap(np.uint8(255*heat[:,:,i]), cv2.COLORMAP_JET)
 				im_heat  = cv2.addWeighted(im, 0.6, heatmap, 0.4, 0)
-				cv2.imwrite('samples/heat/unipose'+str(i)+'.png', im_heat)
+				#cv2.imwrite('samples/heat/unipose'+str(i)+'.png', im_heat)
+				cv2.imwrite('unipose'+str(i)+'.png', im_heat)
 		
 parser = argparse.ArgumentParser()
 parser.add_argument('--pretrained', default=None,type=str, dest='pretrained')
 parser.add_argument('--dataset', type=str, dest='dataset', default='LSP')
-parser.add_argument('--train_dir', default='project/data/train',type=str, dest='train_dir')
-parser.add_argument('--val_dir', type=str, dest='val_dir', default='project/data/val')
+parser.add_argument('--train_dir', default='Unipose-with-DARKPose/data/train',type=str, dest='train_dir')
+parser.add_argument('--val_dir', type=str, dest='val_dir', default='Unipose-with-DARKPose/data/val')
 parser.add_argument('--model_name', default=None, type=str)
 parser.add_argument('--model_arch', default='unipose', type=str)
 
 starter_epoch =    0
-epochs        =  100
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+epochs        =  1 #100
 args = parser.parse_args()
 
 if args.dataset == 'LSP':
-	args.train_dir  = 'project/data/train'
-	args.val_dir    = 'project/data/val'
-	args.pretrained = 'project/data/weights.tar'
+	args.train_dir  = 'Unipose-with-DARKPose/data/train'
+	args.val_dir    = 'Unipose-with-DARKPose/data/val'
+	args.pretrained = 'Unipose-with-DARKPose/data/weights.tar'
 elif args.dataset == 'MPII':
 	args.train_dir  = '/PATH/TO/MPIII/TRAIN'
 	args.val_dir    = '/PATH/TO/MPIII/VAL'
 
 trainer = Trainer(args)
-for epoch in range(starter_epoch, epochs):
-	trainer.training(epoch)
-	trainer.validation(epoch)
+# for epoch in range(starter_epoch, epochs):
+	# trainer.training(epoch)
+	# trainer.validation(epoch)
 	
 # Uncomment for inference, demo, and samples for the trained model:
 trainer.test(0)
