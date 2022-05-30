@@ -1,5 +1,6 @@
 import math
 import torch.nn as nn
+import torch
 import torch.utils.model_zoo as model_zoo
 
 """
@@ -60,7 +61,11 @@ class ResNet(nn.Module):
             dilations = [1, 1, 2, 4]
         else:
             raise NotImplementedError
-
+        self.device = 'cuda'
+        if torch.cuda.is_available():
+            self.device = torch.device('cuda')
+        else:
+            self.device = torch.device('cpu')
         # Modules
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
                                 bias=False)
@@ -115,7 +120,7 @@ class ResNet(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, input):
-        input = input.cuda()
+        input = input.to(device=self.device)
         x = self.conv1(input)
         x = self.bn1(x)
         x = self.relu(x)
