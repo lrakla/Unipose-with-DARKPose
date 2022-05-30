@@ -29,10 +29,16 @@ from tqdm import tqdm
 
 import torch.nn.functional as F
 from collections import OrderedDict
-from torchsummary import summary
+# from torchsummary import summary
 
 from PIL import Image
+import os
 
+device = 'cuda'
+if torch.cuda.is_available():
+    device = torch.device('cuda')
+else:
+    device = torch.device('cpu')
 
 class Trainer(object):
 	def __init__(self, args):
@@ -52,22 +58,22 @@ class Trainer(object):
 		self.step_size    = 13275
 		self.sigma        = 3
 		self.stride       = 8
-
+		
 		cudnn.benchmark   = True
 
 		if self.dataset   ==  "LSP":
 			self.numClasses  = 14
 		elif self.dataset == "MPII":
 			self.numClasses  = 16
-
+		print(self.train_dir,self.val_dir)
 		self.train_loader, self.val_loader = getDataloader(self.dataset, self.train_dir,\
 			self.val_dir, self.sigma, self.stride, self.workers, self.batch_size)
 
 		model = unipose(self.dataset, num_classes=self.numClasses,backbone='resnet',output_stride=16,sync_bn=True,freeze_bn=False, stride=self.stride)
 
-		self.model       = model.cuda()
+		self.model       = model.to(device=device)
 
-		self.criterion   = nn.MSELoss().cuda()
+		self.criterion   = nn.MSELoss().to(device=device)
 
 		self.optimizer   = torch.optim.Adam(self.model.parameters(), lr=self.lr)
 
@@ -76,7 +82,7 @@ class Trainer(object):
 		self.iters       = 0
 
 		if self.args.pretrained is not None:
-			checkpoint = torch.load(self.args.pretrained)
+			checkpoint = torch.load(self.args.pretrained,map_location=device)
 			p = checkpoint['state_dict']
 
 			state_dict = self.model.state_dict()
@@ -107,8 +113,8 @@ class Trainer(object):
 			learning_rate = adjust_learning_rate(self.optimizer, self.iters, self.lr, policy='step',
 												 gamma=self.gamma, step_size=self.step_size)
 
-			input_var     =     input.cuda()
-			heatmap_var   =    heatmap.cuda()
+			input_var     =     input.to(device=device)
+			heatmap_var   =    heatmap.to(device=device)
 
 			self.optimizer.zero_grad()
 
@@ -145,8 +151,8 @@ class Trainer(object):
 
 			cnt += 1
 
-			input_var     =      input.cuda()
-			heatmap_var   =    heatmap.cuda()
+			input_var     =      input.to(device=device)
+			heatmap_var   =    heatmap.to(device=device)
 			self.optimizer.zero_grad()
 
 			heat = self.model(input_var)
@@ -200,7 +206,7 @@ class Trainer(object):
 
 		for idx in range(1):
 			print(idx,"/",2000)
-			img_path = 'Unipose-with-DARKPose/data/train/images/im0001.jpg'
+			img_path = './data/test/images/im1889.jpg'
 
 			center   = [184, 184]
 
@@ -216,14 +222,15 @@ class Trainer(object):
 
 			self.model.eval()
 
-			input_var   = img.cuda()
+			input_var   = img.to(device=device)
 
 			heat = self.model(input_var)
 
 			heat = F.interpolate(heat, size=input_var.size()[2:], mode='bilinear', align_corners=True)
 
 			kpts = get_kpts(heat, img_h=368.0, img_w=368.0)
-			draw_paint(img_path, kpts, idx, epoch, self.model_arch, self.dataset,img_path)
+			print(len(kpts),kpts[:2])
+			draw_paint(img_path, kpts, idx, epoch, self.model_arch, self.dataset)
 
 			heat = heat.detach().cpu().numpy()
 
@@ -249,8 +256,8 @@ class Trainer(object):
 parser = argparse.ArgumentParser()
 parser.add_argument('--pretrained', default=None,type=str, dest='pretrained')
 parser.add_argument('--dataset', type=str, dest='dataset', default='LSP')
-parser.add_argument('--train_dir', default='Unipose-with-DARKPose/data/train',type=str, dest='train_dir')
-parser.add_argument('--val_dir', type=str, dest='val_dir', default='Unipose-with-DARKPose/data/val')
+parser.add_argument('--train_dir', default='./data/train',type=str, dest='train_dir')
+parser.add_argument('--val_dir', type=str, dest='val_dir', default='./data/val')
 parser.add_argument('--model_name', default=None, type=str)
 parser.add_argument('--model_arch', default='unipose', type=str)
 
@@ -259,9 +266,9 @@ epochs        =  1 #100
 args = parser.parse_args()
 
 if args.dataset == 'LSP':
-	args.train_dir  = 'Unipose-with-DARKPose/data/train'
-	args.val_dir    = 'Unipose-with-DARKPose/data/val'
-	args.pretrained = 'Unipose-with-DARKPose/data/weights.tar'
+	args.train_dir  = './data/train'
+	args.val_dir    = './data/val'
+	args.pretrained = './data/weights.tar'
 elif args.dataset == 'MPII':
 	args.train_dir  = '/PATH/TO/MPIII/TRAIN'
 	args.val_dir    = '/PATH/TO/MPIII/VAL'

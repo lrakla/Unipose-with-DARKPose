@@ -11,6 +11,7 @@ import math
 import Mytransforms
 import matplotlib.pyplot as plt
 import torch
+import torch.nn.functional as F
 #from utils.utils import PAF as PAF
 
 
@@ -31,9 +32,10 @@ def read_mat_file(mode, root_dir, img_list):
         Notice:
         lsp_dataset differ from lspet dataset
     """
-    root_dir = 'Unipose-with-DARKPose/data'
+    root_dir = './data'
     mat_arr = scipy.io.loadmat(os.path.join(root_dir, 'joints.mat'))['joints'][:,:,:1000]
     # lspnet (14,3,10000)
+    # print(mat_arr[1].shape)
     if mode == 'lspet':
         lms = mat_arr.transpose([2, 1, 0])
         kpts = mat_arr.transpose([2, 0, 1]).tolist()
@@ -45,6 +47,7 @@ def read_mat_file(mode, root_dir, img_list):
 
     centers = []
     scales = []
+    print('lms',lms.shape,len(img_list))
     for idx in range(lms.shape[0]):
         im = Image.open(img_list[idx])
         w = im.size[0]
@@ -199,6 +202,7 @@ class LSP_Data(data.Dataset):
     def __init__(self, mode, root_dir, sigma, stride, transformer=None):
 
         self.img_list    = read_data_file(root_dir)
+        # print(len(self.img_list),root_dir)
         self.kpt_list, self.center_list, self.scale_list = read_mat_file(mode, root_dir, self.img_list)
         self.stride      = stride
         self.transformer = transformer
@@ -254,10 +258,26 @@ class LSP_Data(data.Dataset):
         return len(self.img_list)
 
 if __name__ == "__main__":
-    img, heatmap, centermap, img_path = LSP_Data('lsp', 'Unipose-with-DARKPose/data/train', 3, 8, transformer=
-    Mytransforms.Compose([Mytransforms.RandomHorizontalFlip(),]))
+
+    img, heatmap, centermap, img_path = LSP_Data('lsp', './data/train', 3, 8, transformer=Mytransforms.Compose([Mytransforms.RandomHorizontalFlip(),])).__getitem__(0)
     hm = torch.zeros((heatmap.shape[1],heatmap.shape[2]))
-    for i in range(15):
-        hm += heatmap[i,:,:]
-    plt.imsave("hm.png",np.uint8(hm))
+    heatmap = torch.reshape(heatmap,(1,heatmap.shape[0],heatmap.shape[1],heatmap.shape[2]))
+    heatmap = F.interpolate(heatmap, size=img.size()[2:], mode='bilinear', align_corners=True)
+    heatmap = heatmap.numpy()
+    heatmap = heatmap[0].transpose(1,2,0)
+    for i in range(heatmap.shape[0]):
+        for j in range(heatmap.shape[1]):
+            for k in range(heatmap.shape[2]):
+                if heatmap[i,j,k] < 0:
+                    heatmap[i,j,k] = 0
+    
+    print(heatmap.shape)
+    # for i in range(1,15):
+    #     hm += heatmap[i,:,:]
+    new = cv2.applyColorMap(np.uint8(255*heatmap[:,:,0]), cv2.COLORMAP_JET)
+    new = cv2.resize(new,(368,368))
+    new  = cv2.addWeighted(img, 0.6, new, 0.4, 0)
+    cv2.imshow('hm',new)
+    cv2.waitKey(0) 
+    cv2.destroyAllWindows() 
 

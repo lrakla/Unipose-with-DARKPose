@@ -102,7 +102,7 @@ def get_kpts(maps, img_h = 368.0, img_w = 368.0):
     return kpts
 
 
-def draw_paint(im, kpts, mapNumber, epoch, model_arch, dataset,img_path):
+def draw_paint(img_path, kpts, mapNumber, epoch, model_arch, dataset):
 
            #       RED           GREEN           RED          YELLOW          YELLOW          PINK          GREEN
     colors = [[000,000,255], [000,255,000], [000,000,255], [255,255,000], [255,255,000], [255,000,255], [000,255,000],\
@@ -110,20 +110,27 @@ def draw_paint(im, kpts, mapNumber, epoch, model_arch, dataset,img_path):
            #       BLUE          YELLOW          PINK          GREEN          GREEN           RED          YELLOW           BLUE
 
     if dataset == "LSP":
-        # limbSeq = [[13, 12], [12, 9], [12, 8], [9, 10], [8, 7], [10,11], [7, 6], [12, 3],\
-        #             [12, 2], [ 2, 1], [ 1, 0], [ 3, 4], [4,  5], [15,16], [16,18], [17,18], [15,17]]
-        limbSeq = [[13, 12], [12, 9], [12, 8], [8, 7], [9, 10], [7, 6], [10, 11], [12, 3],\
-             [2, 3], [2, 1], [1, 0], [3, 4], [4, 5]]
-        kpts[15][0] = kpts[15][0]  - 25
-        kpts[15][1] = kpts[15][1]  - 50
-        kpts[16][0] = kpts[16][0]  - 25
-        kpts[16][1] = kpts[16][1]  + 50
-        kpts[17][0] = kpts[17][0] + 25
-        kpts[17][1] = kpts[17][1] - 50
-        kpts[18][0] = kpts[18][0] + 25
-        kpts[18][1] = kpts[18][1] + 50
+        limbSeq = [[13, 12], [12, 9], [12, 8], [8, 7], [9, 10], [7, 6], \
+            [10, 11], [12, 3], [2, 3], [2, 1], [1, 0], [3, 4], [4, 5]]
+        # kpts[15][0] = kpts[15][0]  - 25
+        # kpts[15][1] = kpts[15][1]  - 50
+        # kpts[16][0] = kpts[16][0]  - 25
+        # kpts[16][1] = kpts[16][1]  + 50
+        # kpts[17][0] = kpts[17][0] + 25
+        # kpts[17][1] = kpts[17][1] - 50
+        # kpts[18][0] = kpts[18][0] + 25
+        # kpts[18][1] = kpts[18][1] + 50
+        
+        # kpts[9][0] = kpts[9][0]  - 25
+        # kpts[9][1] = kpts[9][1]  - 50
+        # kpts[6][0] = kpts[6][0]  - 25
+        # kpts[6][1] = kpts[6][1]  + 50
+        # kpts[8][0] = kpts[8][0] + 25
+        # kpts[8][1] = kpts[8][1] - 50
+        # kpts[11][0] = kpts[11][0] + 25
+        # kpts[11][1] = kpts[11][1] + 50
 
-    im = cv2.resize(cv2.imread(img_path[0]),(368,368))
+    im = cv2.resize(cv2.imread(img_path),(368,368))
     # draw points
     for k in kpts:
         x = k[0]
@@ -153,7 +160,8 @@ def draw_paint(im, kpts, mapNumber, epoch, model_arch, dataset,img_path):
 
         im = cv2.addWeighted(im, 0.2, cur_im, 0.8, 0)
 
-    cv2.imwrite('WASPose'+str(mapNumber)+'.png', im)
+    cv2.imwrite('./pose_'+str(mapNumber)+'.png', im)
+
 
 
 def guassian_kernel(size_w, size_h, center_x, center_y, sigma):
@@ -372,7 +380,7 @@ def non_max_suppression(prediction, num_classes, conf_thres=0.5, nms_thres=0.4):
         # Iterate through all predicted classes
         unique_labels = detections[:, -1].cpu().unique()
         if prediction.is_cuda:
-            unique_labels = unique_labels.cuda()
+            unique_labels = unique_labels.to(device=device)
         for c in unique_labels:
             # Get the detections with the particular class
             detections_class = detections[detections[:, -1] == c]
