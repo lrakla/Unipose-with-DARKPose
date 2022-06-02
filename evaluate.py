@@ -131,22 +131,6 @@ def accuracy(output, target, thr_PCK, thr_PCKh, dataset, hm_type='gaussian', thr
 		pelvis = [(target[0,12,0]+target[0,13,0])/2, (target[0,12,1]+target[0,13,1])/2]
 		torso  = np.linalg.norm(target[0,13,:] - pelvis)
 
-	elif dataset == "Penn_Action":
-		neck   = (target[0,1,:]+target[0,2,:])/2 #[(target[0,1,0]+target[0,2,0])/2, (target[0,1,1]+target[0,2,1])/2]
-		pelvis = (target[0,7,:]+target[0,8,:])/2 #[(target[0,7,0]+target[0,8,0])/2, (target[0,7,1]+target[0,8,1])/2]
-		torso  = np.linalg.norm(neck - pelvis)
-
-	elif dataset == "NTID":
-		torso  = np.linalg.norm(target[0,3,:] - target[0,1,:])
-
-	elif dataset == "PoseTrack":
-		pelvis = (target[0, 6,:]+target[0, 7,:])/2
-		neck   = (target[0,12,:]+target[0,13,:])/2
-		torso  = np.linalg.norm(neck - pelvis)
-
-	elif dataset == "BBC":
-		neck = [(target[0,6,0]+target[0,7,0])/2, (target[0,6,1]+target[0,7,1])/2]
-		torso  = np.linalg.norm(3*(target[0,1,0] - neck))
 
 	elif dataset == "LSP":
 		pelvis = [(target[0,3,0]+target[0,4,0])/2, (target[0,3,1]+target[0,4,1])/2]

@@ -65,7 +65,6 @@ class Trainer(object):
 			self.numClasses  = 14
 		elif self.dataset == "MPII":
 			self.numClasses  = 16
-		print(self.train_dir,self.val_dir)
 		self.train_loader, self.val_loader = getDataloader(self.dataset, self.train_dir,\
 			self.val_dir, self.sigma, self.stride, self.workers, self.batch_size)
 
@@ -206,7 +205,7 @@ class Trainer(object):
 
 		for idx in range(1):
 			print(idx,"/",2000)
-			img_path = './data/test/images/im1889.jpg'
+			img_path = './data/val/images/im1901.jpg'
 
 			center   = [184, 184]
 
@@ -262,21 +261,22 @@ parser.add_argument('--model_name', default=None, type=str)
 parser.add_argument('--model_arch', default='unipose', type=str)
 
 starter_epoch =    0
-epochs        =  1 #100
+epochs        =  10 #100
 args = parser.parse_args()
 
 if args.dataset == 'LSP':
 	args.train_dir  = './data/train'
 	args.val_dir    = './data/val'
-	args.pretrained = './data/weights.tar'
+	args.pretrained = None
+	# args.pretrained = './data/weights.tar'
 elif args.dataset == 'MPII':
 	args.train_dir  = '/PATH/TO/MPIII/TRAIN'
 	args.val_dir    = '/PATH/TO/MPIII/VAL'
 
 trainer = Trainer(args)
-# for epoch in range(starter_epoch, epochs):
-	# trainer.training(epoch)
-	# trainer.validation(epoch)
+for epoch in range(starter_epoch, epochs):
+	trainer.training(epoch)
+	trainer.validation(epoch)
 	
 # Uncomment for inference, demo, and samples for the trained model:
 trainer.test(0)

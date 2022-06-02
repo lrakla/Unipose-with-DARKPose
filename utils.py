@@ -104,22 +104,20 @@ def get_kpts(maps, img_h = 368.0, img_w = 368.0):
 
 def draw_paint(img_path, kpts, mapNumber, epoch, model_arch, dataset):
 
-           #       RED           GREEN           RED          YELLOW          YELLOW          PINK          GREEN
+           #       RED head          GREEN           RED          YELLOW          YELLOW          PINK          GREEN
     colors = [[000,000,255], [000,255,000], [000,000,255], [255,255,000], [255,255,000], [255,000,255], [000,255,000],\
               [255,000,000], [255,255,000], [255,000,255], [000,255,000], [000,255,000], [000,000,255], [255,255,000], [255,000,000]]
            #       BLUE          YELLOW          PINK          GREEN          GREEN           RED          YELLOW           BLUE
 
     if dataset == "LSP":
+        # limbSeq = [[13, 12], [12, 9], [12, 8], [9, 10], [8, 7], [10,11], [7, 6], [12, 3],\
+        #             [12, 2], [ 2, 1], [ 1, 0], [ 3, 4], [4,  5], [15,16], [16,18], [17,18], [15,17]]
+
+
+                    #head    #ls       #rs    #rbcp   #lbcp    #rfrm
         limbSeq = [[13, 12], [12, 9], [12, 8], [8, 7], [9, 10], [7, 6], \
+            #lfrm    #torso      #hip?  #rthigh  #rcalf #lthigh #lcalf
             [10, 11], [12, 3], [2, 3], [2, 1], [1, 0], [3, 4], [4, 5]]
-        # kpts[15][0] = kpts[15][0]  - 25
-        # kpts[15][1] = kpts[15][1]  - 50
-        # kpts[16][0] = kpts[16][0]  - 25
-        # kpts[16][1] = kpts[16][1]  + 50
-        # kpts[17][0] = kpts[17][0] + 25
-        # kpts[17][1] = kpts[17][1] - 50
-        # kpts[18][0] = kpts[18][0] + 25
-        # kpts[18][1] = kpts[18][1] + 50
         
         # kpts[9][0] = kpts[9][0]  - 25
         # kpts[9][1] = kpts[9][1]  - 50
@@ -129,6 +127,15 @@ def draw_paint(img_path, kpts, mapNumber, epoch, model_arch, dataset):
         # kpts[8][1] = kpts[8][1] - 50
         # kpts[11][0] = kpts[11][0] + 25
         # kpts[11][1] = kpts[11][1] + 50
+
+        # kpts[10][0] = kpts[10][0]  - 25
+        # kpts[10][1] = kpts[10][1]  - 50
+        # kpts[11][0] = kpts[11][0]  - 25
+        # kpts[11][1] = kpts[11][1]  + 50
+        # kpts[12][0] = kpts[12][0] + 25
+        # kpts[12][1] = kpts[12][1] - 50
+        # kpts[13][0] = kpts[13][0] + 25
+        # kpts[13][1] = kpts[13][1] + 50
 
     im = cv2.resize(cv2.imread(img_path),(368,368))
     # draw points

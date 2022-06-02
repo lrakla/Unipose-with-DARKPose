@@ -30,15 +30,10 @@ def read_mat_file(mode, root_dir, img_list):
         mode (str): 'lsp' or 'lspet'
         return: three list: key_points list , centers list and scales list
         Notice:
-        lsp_dataset differ from lspet dataset
+        lsp_dataset differs from lspet dataset
     """
     root_dir = './data'
     mat_arr = scipy.io.loadmat(os.path.join(root_dir, 'joints.mat'))['joints'][:,:,:1000]
-    # lspnet (14,3,10000)
-    # print(mat_arr[1].shape)
-    if mode == 'lspet':
-        lms = mat_arr.transpose([2, 1, 0])
-        kpts = mat_arr.transpose([2, 0, 1]).tolist()
     # lsp (3,14,2000)
     if mode == 'lsp':
         mat_arr[2] = np.logical_not(mat_arr[2])
@@ -47,7 +42,6 @@ def read_mat_file(mode, root_dir, img_list):
 
     centers = []
     scales = []
-    print('lms',lms.shape,len(img_list))
     for idx in range(lms.shape[0]):
         im = Image.open(img_list[idx])
         w = im.size[0]
@@ -232,14 +226,16 @@ class LSP_Data(data.Dataset):
             # resize from 368 to 46
             x = int(kpt[i][0]) * 1.0 / self.stride
             y = int(kpt[i][1]) * 1.0 / self.stride
-            heat_map = guassian_kernel(size_h=int(height/self.stride),size_w=int(width/self.stride), center_x=x, center_y=y, sigma=self.sigma)
+            heat_map = guassian_kernel(size_h=int(height/self.stride),size_w=int(width/self.stride), \
+                center_x=x, center_y=y, sigma=self.sigma)
             heat_map[heat_map > 1] = 1
             heat_map[heat_map < 0.0099] = 0
             heatmap[:, :, i + 1] = heat_map
 
         heatmap[:, :, 0] = 1.0 - np.max(heatmap[:, :, 1:], axis=2)  # for background
         centermap = np.zeros((height, width, 1), dtype=np.float32)
-        center_map = guassian_kernel(size_h=height, size_w=width, center_x=center[0], center_y=center[1], sigma=3)
+        center_map = guassian_kernel(size_h=height, size_w=width, center_x=center[0], \
+            center_y=center[1], sigma=3)
         center_map[center_map > 1] = 1
         center_map[center_map < 0.0099] = 0
         centermap[:, :, 0] = center_map
@@ -250,7 +246,6 @@ class LSP_Data(data.Dataset):
         centermap = Mytransforms.to_tensor(centermap)
         # limbsMap  = Mytransforms.to_tensor(limbsMap)
         box       = Mytransforms.to_tensor(box)
-        
         return img, heatmap, centermap, img_path #, 0, box
 
 
@@ -259,10 +254,12 @@ class LSP_Data(data.Dataset):
 
 if __name__ == "__main__":
 
-    img, heatmap, centermap, img_path = LSP_Data('lsp', './data/train', 3, 8, transformer=Mytransforms.Compose([Mytransforms.RandomHorizontalFlip(),])).__getitem__(0)
-    hm = torch.zeros((heatmap.shape[1],heatmap.shape[2]))
+    img, heatmap, centermap, img_path = LSP_Data('lsp', './data/train',\
+        3, 8, transformer=Mytransforms.Compose([Mytransforms.RandomHorizontalFlip(),])).__getitem__(15)
+    # print(img.size()) 3,368,368,
+    hm = torch.zeros((heatmap.shape[1],heatmap.shape[2])) #46,46
     heatmap = torch.reshape(heatmap,(1,heatmap.shape[0],heatmap.shape[1],heatmap.shape[2]))
-    heatmap = F.interpolate(heatmap, size=img.size()[2:], mode='bilinear', align_corners=True)
+    heatmap = F.interpolate(heatmap, size=img.size()[1:], mode='bilinear', align_corners=True)
     heatmap = heatmap.numpy()
     heatmap = heatmap[0].transpose(1,2,0)
     for i in range(heatmap.shape[0]):
@@ -270,14 +267,10 @@ if __name__ == "__main__":
             for k in range(heatmap.shape[2]):
                 if heatmap[i,j,k] < 0:
                     heatmap[i,j,k] = 0
-    
-    print(heatmap.shape)
-    # for i in range(1,15):
+    #for i in range(1,15):
     #     hm += heatmap[i,:,:]
     new = cv2.applyColorMap(np.uint8(255*heatmap[:,:,0]), cv2.COLORMAP_JET)
     new = cv2.resize(new,(368,368))
-    new  = cv2.addWeighted(img, 0.6, new, 0.4, 0)
-    cv2.imshow('hm',new)
-    cv2.waitKey(0) 
-    cv2.destroyAllWindows() 
-
+    print(new.shape, img.shape)
+    new = cv2.addWeighted(np.uint8(torch.permute(img,(1,2,0))), 0.6, np.uint8(new), 0.4, 0)
+    plt.imsave('hm.png',new)
