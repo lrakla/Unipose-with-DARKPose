@@ -185,17 +185,18 @@ class Trainer(object):
 		PCKhAvg = PCKh.sum()/(self.numClasses+1)
 		PCKAvg  =  PCK.sum()/(self.numClasses+1)
 
-		# if mAP > self.isBest:
-		# 	self.isBest = mAP
-		# 	save_checkpoint({'state_dict': self.model.state_dict()}, self.isBest, self.args.model_name)
-		# 	print("Model saved to ",self.args.model_name)
+		if mAP > self.isBest:
+			self.isBest = mAP
+			# save_checkpoint({'state_dict': self.model.state_dict()}, self.isBest, self.args.model_name)
+			# print("Model saved to ",self.args.model_name)
 
 		if mPCKh > self.bestPCKh:
 			self.bestPCKh = mPCKh
 		if mPCK > self.bestPCK:
 			self.bestPCK = mPCK
 
-		print("Best AP = %.2f%%; PCK = %2.2f%%; PCKh = %2.2f%%" % (self.isBest*100, self.bestPCK*100,self.bestPCKh*100))
+		print("Best AP = %.2f%%; PCK = %2.2f%%; PCKh = %2.2f%%" %
+		 (self.isBest*100, self.bestPCK*100,self.bestPCKh*100))
 
 
 
@@ -204,7 +205,7 @@ class Trainer(object):
 		print("Testing") 
 
 		for idx in range(1):
-			print(idx,"/",2000)
+			# print(idx,"/",2000)
 			img_path = './data/val/images/im1901.jpg'
 
 			center   = [184, 184]
@@ -249,7 +250,6 @@ class Trainer(object):
 			for i in range(self.numClasses+1):
 				heatmap = cv2.applyColorMap(np.uint8(255*heat[:,:,i]), cv2.COLORMAP_JET)
 				im_heat  = cv2.addWeighted(im, 0.6, heatmap, 0.4, 0)
-				#cv2.imwrite('samples/heat/unipose'+str(i)+'.png', im_heat)
 				cv2.imwrite('unipose'+str(i)+'.png', im_heat)
 		
 parser = argparse.ArgumentParser()
@@ -257,11 +257,11 @@ parser.add_argument('--pretrained', default=None,type=str, dest='pretrained')
 parser.add_argument('--dataset', type=str, dest='dataset', default='LSP')
 parser.add_argument('--train_dir', default='./data/train',type=str, dest='train_dir')
 parser.add_argument('--val_dir', type=str, dest='val_dir', default='./data/val')
-parser.add_argument('--model_name', default=None, type=str)
+parser.add_argument('--model_name', default='model', type=str)
 parser.add_argument('--model_arch', default='unipose', type=str)
 
 starter_epoch =    0
-epochs        =  10 #100
+epochs        =  1 #100
 args = parser.parse_args()
 
 if args.dataset == 'LSP':

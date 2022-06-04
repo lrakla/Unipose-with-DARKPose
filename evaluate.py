@@ -3,13 +3,14 @@ import numpy as np
 
 
 def calc_dists(preds, target, normalize):
+	#print(preds.shape, target.shape) #(1,15,2)
 	preds  =  preds.astype(np.float32)
 	target = target.astype(np.float32)
-	dists  = np.zeros((preds.shape[1], preds.shape[0]))
+	dists  = np.zeros((preds.shape[1], preds.shape[0])) #15,1
 
-	for n in range(preds.shape[0]):
-		for c in range(preds.shape[1]):
-			if target[n, c, 0] > 1 and target[n, c, 1] > 1:
+	for n in range(preds.shape[0]): #1
+		for c in range(preds.shape[1]): #15
+			if target[n, c, 0] > 1 and target[n, c, 1] > 1: #as pixel values
 				normed_preds   =  preds[n, c, :] / normalize[n]
 				normed_targets = target[n, c, :] / normalize[n]
 				dists[c, n]    = np.linalg.norm(normed_preds - normed_targets)
@@ -20,6 +21,9 @@ def calc_dists(preds, target, normalize):
 
 
 def dist_acc(dists, threshold = 0.5):
+	"""
+	Returns number of pixels/joints which are valid & under threshold
+	"""
 	dist_cal     = np.not_equal(dists, -1)
 	num_dist_cal = dist_cal.sum()
 
@@ -56,6 +60,7 @@ def get_max_preds(batch_heatmaps):
 
 
 def accuracy(output, target, thr_PCK, thr_PCKh, dataset, hm_type='gaussian', threshold=0.5):
+	#print("Output shape", output.shape) #(1,15,46,46)
 	idx  = list(range(output.shape[1]))
 	norm = 1.0
 
@@ -74,7 +79,7 @@ def accuracy(output, target, thr_PCK, thr_PCKh, dataset, hm_type='gaussian', thr
 	cnt     = 0
 	visible = np.zeros((len(idx)))
 
-	for i in range(len(idx)):
+	for i in range(len(idx)): #accuracy per joint
 		acc[i] = dist_acc(dists[idx[i]])
 		if acc[i] >= 0:
 			avg_acc = avg_acc + acc[i]
