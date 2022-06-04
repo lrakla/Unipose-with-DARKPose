@@ -205,7 +205,7 @@ class Trainer(object):
 
 		for idx in range(1):
 			print(idx,"/",2000)
-			img_path = './data/val/images/im1901.jpg'
+			img_path = './data/test/images/im1889.jpg'
 
 			center   = [184, 184]
 
@@ -234,13 +234,7 @@ class Trainer(object):
 			heat = heat.detach().cpu().numpy()
 
 			heat = heat[0].transpose(1,2,0)
-
-
-			for i in range(heat.shape[0]):
-				for j in range(heat.shape[1]):
-					for k in range(heat.shape[2]):
-						if heat[i,j,k] < 0:
-							heat[i,j,k] = 0
+			heat[heat < 0] = 0
 						
 
 			im       = cv2.resize(cv2.imread(img_path),(368,368))
@@ -267,16 +261,16 @@ args = parser.parse_args()
 if args.dataset == 'LSP':
 	args.train_dir  = './data/train'
 	args.val_dir    = './data/val'
-	args.pretrained = None
-	# args.pretrained = './data/weights.tar'
+	# args.pretrained = None
+	args.pretrained = './data/weights.tar'
 elif args.dataset == 'MPII':
 	args.train_dir  = '/PATH/TO/MPIII/TRAIN'
 	args.val_dir    = '/PATH/TO/MPIII/VAL'
 
 trainer = Trainer(args)
-for epoch in range(starter_epoch, epochs):
-	trainer.training(epoch)
-	trainer.validation(epoch)
+# for epoch in range(starter_epoch, epochs):
+# 	trainer.training(epoch)
+# 	trainer.validation(epoch)
 	
 # Uncomment for inference, demo, and samples for the trained model:
 trainer.test(0)

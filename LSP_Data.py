@@ -263,19 +263,14 @@ if __name__ == "__main__":
     heatmap = F.interpolate(heatmap, size=img.size()[1:], mode='bilinear', align_corners=True)
     heatmap = heatmap.numpy()
     heatmap = heatmap[0].transpose(1,2,0)
-    for i in range(heatmap.shape[0]):
-        for j in range(heatmap.shape[1]):
-            for k in range(heatmap.shape[2]):
-                if heatmap[i,j,k] < 0:
-                    heatmap[i,j,k] = 0
-    #for i in range(1,15):
-    #     hm += heatmap[i,:,:]
+    img = img.numpy().transpose(1,2,0)
+    heatmap[heatmap < 0] = 0
     new = cv2.applyColorMap(np.uint8(255*heatmap[:,:,0]), cv2.COLORMAP_JET)
     print(new.shape)
     # new = cv2.resize(new,(368,368))
     print(new.shape, img.shape)
-    new = cv2.addWeighted(np.uint8(torch.permute(img,(1,2,0))), 0.6, np.uint8(new), 0.4, 0)
+    new = cv2.addWeighted(np.uint8(img), 0.6,new, 0.4, 0)
     plt.imsave('hm.png',new)
-    plt.imshow(torch.permute(img,(1,2,0)))
+    plt.imshow(img)
     # plt.imshow(new)
     plt.show()
