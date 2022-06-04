@@ -215,7 +215,8 @@ class LSP_Data(data.Dataset):
         scale = self.scale_list[index]
 
         # expand dataset
-        img, kpt, center = self.transformer(img, kpt, center, scale)
+        if self.transformer:
+            img, kpt, center = self.transformer(img, kpt, center, scale)
         height, width, _ = img.shape
         # limbsMap = getLimbs(img, kpt, height, width, self.stride, self.bodyParts, 25, 1)
 
@@ -224,8 +225,8 @@ class LSP_Data(data.Dataset):
         heatmap = np.zeros((int(height/self.stride), int(width/self.stride), int(len(kpt)+1)), dtype=np.float32)
         for i in range(len(kpt)):
             # resize from 368 to 46
-            x = int(kpt[i][0]) * 1.0 / self.stride
-            y = int(kpt[i][1]) * 1.0 / self.stride
+            x = kpt[i][0] / self.stride
+            y = kpt[i][1] / self.stride
             heat_map = guassian_kernel(size_h=int(height/self.stride),size_w=int(width/self.stride), \
                 center_x=x, center_y=y, sigma=self.sigma)
             heat_map[heat_map > 1] = 1
@@ -255,22 +256,21 @@ class LSP_Data(data.Dataset):
 if __name__ == "__main__":
 
     img, heatmap, centermap, img_path = LSP_Data('lsp', './data/train',\
-        3, 8, transformer=Mytransforms.Compose([Mytransforms.RandomHorizontalFlip(),])).__getitem__(15)
+        3, 8, transformer=Mytransforms.Compose([Mytransforms.RandomHorizontalFlip(),])).__getitem__(0)
     # print(img.size()) 3,368,368,
     hm = torch.zeros((heatmap.shape[1],heatmap.shape[2])) #46,46
     heatmap = torch.reshape(heatmap,(1,heatmap.shape[0],heatmap.shape[1],heatmap.shape[2]))
     heatmap = F.interpolate(heatmap, size=img.size()[1:], mode='bilinear', align_corners=True)
     heatmap = heatmap.numpy()
     heatmap = heatmap[0].transpose(1,2,0)
-    for i in range(heatmap.shape[0]):
-        for j in range(heatmap.shape[1]):
-            for k in range(heatmap.shape[2]):
-                if heatmap[i,j,k] < 0:
-                    heatmap[i,j,k] = 0
-    #for i in range(1,15):
-    #     hm += heatmap[i,:,:]
+    img = img.numpy().transpose(1,2,0)
+    heatmap[heatmap < 0] = 0
     new = cv2.applyColorMap(np.uint8(255*heatmap[:,:,0]), cv2.COLORMAP_JET)
-    new = cv2.resize(new,(368,368))
+    print(new.shape)
+    # new = cv2.resize(new,(368,368))
     print(new.shape, img.shape)
-    new = cv2.addWeighted(np.uint8(torch.permute(img,(1,2,0))), 0.6, np.uint8(new), 0.4, 0)
+    new = cv2.addWeighted(np.uint8(img), 0.6,new, 0.4, 0)
     plt.imsave('hm.png',new)
+    plt.imshow(img)
+    # plt.imshow(new)
+    plt.show()
