@@ -212,7 +212,7 @@ def getDataloader(dataset, train_dir , val_dir,sigma, stride, workers, batch_siz
     
         val_loader   = torch.utils.data.DataLoader(
                                             lsp_lspet_data.LSP_Data('lsp', val_dir, sigma, stride,
-                                            Mytransforms.Compose([Mytransforms.TestResized(368),])),
+                                            Mytransforms.Compose([Mytransforms.TestResized(368),]),val=True),
                                             batch_size  = 1, shuffle=True,
                                             num_workers = 1, pin_memory=True)
 

@@ -36,9 +36,9 @@ import os
 
 device = 'cuda'
 if torch.cuda.is_available():
-    device = torch.device('cuda')
+	device = torch.device('cuda')
 else:
-    device = torch.device('cpu')
+	device = torch.device('cpu')
 
 class Trainer(object):
 	def __init__(self, args):
@@ -47,7 +47,7 @@ class Trainer(object):
 		self.val_dir      = args.val_dir
 		self.model_arch   = args.model_arch
 		self.dataset      = args.dataset
-
+		self.DARK = args.DARK
 
 		self.workers      = 1
 		self.weight_decay = 0.0005
@@ -108,7 +108,7 @@ class Trainer(object):
 		print("Epoch " + str(epoch) + ':') 
 		tbar = tqdm(self.train_loader)
 
-		for i, (input, heatmap, centermap, img_path) in enumerate(tbar):
+		for i, (input, heatmap,_,_,_,_) in enumerate(tbar):
 			learning_rate = adjust_learning_rate(self.optimizer, self.iters, self.lr, policy='step',
 												 gamma=self.gamma, step_size=self.step_size)
 
@@ -135,7 +135,7 @@ class Trainer(object):
 			if i == 10000:
 				break
 
-	def validation(self, epoch):
+	def validation(self):
 		self.model.eval()
 		tbar = tqdm(self.val_loader, desc='\r')
 		val_loss = 0.0
@@ -146,7 +146,7 @@ class Trainer(object):
 		count = np.zeros(self.numClasses+1)
 
 		cnt = 0
-		for i, (input, heatmap, centermap, img_path) in enumerate(tbar):
+		for i, (input, heatmap, centermap, img_path,center,scale) in enumerate(tbar):
 
 			cnt += 1
 
@@ -157,13 +157,12 @@ class Trainer(object):
 			heat = self.model(input_var)
 			loss_heat   = self.criterion(heat,  heatmap_var)
 
-			loss = loss_heat
-
 			val_loss += loss_heat.item()
 
 			tbar.set_description('Val   loss: %.6f' % (val_loss / ((i + 1)*self.batch_size)))
 
-			acc, acc_PCK, acc_PCKh, cnt, pred, visible = evaluate.accuracy(heat.detach().cpu().numpy(), heatmap_var.detach().cpu().numpy(),0.2,0.5, self.dataset)
+			acc, acc_PCK, acc_PCKh, cnt, pred, visible = evaluate.accuracy(heat.detach().cpu().numpy(),\
+				 heatmap_var.detach().cpu().numpy(),0.2,0.5, self.dataset,center, scale, self.DARK )
 
 			AP[0]     = (AP[0]  *i + acc[0])      / (i + 1)
 			PCK[0]    = (PCK[0] *i + acc_PCK[0])  / (i + 1)
@@ -187,8 +186,8 @@ class Trainer(object):
 
 		if mAP > self.isBest:
 			self.isBest = mAP
-			# save_checkpoint({'state_dict': self.model.state_dict()}, self.isBest, self.args.model_name)
-			# print("Model saved to ",self.args.model_name)
+			save_checkpoint({'state_dict': self.model.state_dict()}, self.isBest, self.args.model_name)
+			print("Model saved to ",self.args.model_name)
 
 		if mPCKh > self.bestPCKh:
 			self.bestPCKh = mPCKh
@@ -198,15 +197,13 @@ class Trainer(object):
 		print("Best AP = %.2f%%; PCK = %2.2f%%; PCKh = %2.2f%%" %
 		 (self.isBest*100, self.bestPCK*100,self.bestPCKh*100))
 
-
-
 	def test(self,epoch):
 		self.model.eval()
 		print("Testing") 
 
 		for idx in range(1):
 			print(idx,"/",2000)
-			img_path = './data/test/images/im1889.jpg'
+			img_path = './data/train/images/im0001.jpg'
 
 			center   = [184, 184]
 
@@ -229,7 +226,6 @@ class Trainer(object):
 			heat = F.interpolate(heat, size=input_var.size()[2:], mode='bilinear', align_corners=True)
 
 			kpts = get_kpts(heat, img_h=368.0, img_w=368.0)
-			print(len(kpts),kpts[:2])
 			draw_paint(img_path, kpts, idx, epoch, self.model_arch, self.dataset)
 
 			heat = heat.detach().cpu().numpy()
@@ -253,7 +249,7 @@ parser.add_argument('--train_dir', default='./data/train',type=str, dest='train_
 parser.add_argument('--val_dir', type=str, dest='val_dir', default='./data/val')
 parser.add_argument('--model_name', default='model', type=str)
 parser.add_argument('--model_arch', default='unipose', type=str)
-
+parser.add_argument('--DARK', default='False', type=bool)
 starter_epoch =    0
 epochs        =  1 #100
 args = parser.parse_args()
@@ -261,8 +257,9 @@ args = parser.parse_args()
 if args.dataset == 'LSP':
 	args.train_dir  = './data/train'
 	args.val_dir    = './data/val'
-	# args.pretrained = None
+	#args.pretrained = None
 	args.pretrained = './data/weights.tar'
+	args.DARK = True  #change this to just run unipose
 elif args.dataset == 'MPII':
 	args.train_dir  = '/PATH/TO/MPIII/TRAIN'
 	args.val_dir    = '/PATH/TO/MPIII/VAL'
@@ -270,7 +267,7 @@ elif args.dataset == 'MPII':
 trainer = Trainer(args)
 # for epoch in range(starter_epoch, epochs):
 # 	trainer.training(epoch)
-# 	trainer.validation(epoch)
+trainer.validation()
 	
 # Uncomment for inference, demo, and samples for the trained model:
 trainer.test(0)

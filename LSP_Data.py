@@ -24,7 +24,7 @@ def read_data_file(root_dir):
     sorted_image_arr = image_arr[np.argsort(image_nums_arr)]
     return sorted_image_arr.tolist()
 
-def read_mat_file(mode, root_dir, img_list):
+def read_mat_file(mode, root_dir, img_list,val):
     """
         get the groundtruth
         mode (str): 'lsp' or 'lspet'
@@ -33,15 +33,17 @@ def read_mat_file(mode, root_dir, img_list):
         lsp_dataset differs from lspet dataset
     """
     root_dir = './data'
-    mat_arr = scipy.io.loadmat(os.path.join(root_dir, 'joints.mat'))['joints'][:,:,:1000]
+    if not val:
+        mat_arr = scipy.io.loadmat(os.path.join(root_dir, 'joints.mat'))['joints'][:,:,:1000]
+    else:
+         mat_arr = scipy.io.loadmat(os.path.join(root_dir, 'joints.mat'))['joints'][:,:,1000:]
     # lsp (3,14,2000)
     if mode == 'lsp':
-        mat_arr[2] = np.logical_not(mat_arr[2])
-        lms = mat_arr.transpose([2, 0, 1])
-        kpts = mat_arr.transpose([2, 1, 0]).tolist()
-
-    centers = []
-    scales = []
+        mat_arr[2] = np.logical_not(mat_arr[2]) #joints
+        lms = mat_arr.transpose([2, 0, 1])  #1000,3,14
+        kpts = mat_arr.transpose([2, 1, 0]).tolist() 
+    center_list = []
+    scale_list = []
     for idx in range(lms.shape[0]):
         im = Image.open(img_list[idx])
         w = im.size[0]
@@ -51,13 +53,13 @@ def read_mat_file(mode, root_dir, img_list):
                     lms[idx][0][lms[idx][0] > 0].min()) / 2
         center_y = (lms[idx][1][lms[idx][1] < h].max() +
                     lms[idx][1][lms[idx][1] > 0].min()) / 2
-        centers.append([center_x, center_y])
+        center_list.append([center_x, center_y])
 
         scale = (lms[idx][1][lms[idx][1] < h].max() -
                 lms[idx][1][lms[idx][1] > 0].min() + 4) / 368.0
-        scales.append(scale)
+        scale_list.append(scale)
 
-    return kpts, centers, scales
+    return kpts, center_list, scale_list
 
 
 def guassian_kernel(size_w, size_h, center_x, center_y, sigma):
@@ -148,8 +150,6 @@ def getLimbs(img, kpt, height, width, stride, bodyParts, thickness, sigma):
         normalization = (vector[0]*vector[0] + vector[1]*vector[1]) ** 0.5
 
         if normalization != 0:
-            unit_vector   = [vector[0]/normalization, vector[1]/normalization]
-
             x_min = int(max(min(keya[1], keyb[1]), 0))
             x_max = int(min(max(keya[1], keyb[1]), limb_maps.shape[2]))
             y_min = int(max(min(keya[0], keyb[0]), 0))
@@ -157,10 +157,10 @@ def getLimbs(img, kpt, height, width, stride, bodyParts, thickness, sigma):
 
             for y in range(y_min, y_max):
                 for x in range(x_min, x_max):
-                    xca = x - keya[1]
-                    yca = y - keya[0]
-                    xcb = x - keyb[1]
-                    ycb = y - keyb[0]
+                    # xca = x - keya[1]
+                    # yca = y - keya[0]
+                    # xcb = x - keyb[1]
+                    # ycb = y - keyb[0]
                     #d   = math.fabs(xca*unit_vector[0]-yca*unit_vector[1])
                     d   = math.fabs((keyb[0]-keya[0])*x - (keyb[1]-keya[1])*y + keyb[1]*keya[0] - keya[1]*keyb[0])/ \
                                  ((keyb[0]-keya[0])*(keyb[0]-keya[0]) + (keyb[1]-keya[1])*(keyb[1]-keya[1])) ** 0.5
@@ -193,11 +193,12 @@ class LSP_Data(data.Dataset):
         13 = Head  Top
     """
 
-    def __init__(self, mode, root_dir, sigma, stride, transformer=None):
+    def __init__(self, mode, root_dir, sigma, stride, transformer=None, val=False):
 
         self.img_list    = read_data_file(root_dir)
+        self.val = val
         # print(len(self.img_list),root_dir)
-        self.kpt_list, self.center_list, self.scale_list = read_mat_file(mode, root_dir, self.img_list)
+        self.kpt_list, self.center_list, self.scale_list = read_mat_file(mode, root_dir, self.img_list, val)
         self.stride      = stride
         self.transformer = transformer
         self.sigma       = sigma
@@ -228,7 +229,7 @@ class LSP_Data(data.Dataset):
             x = kpt[i][0] / self.stride
             y = kpt[i][1] / self.stride
             heat_map = guassian_kernel(size_h=int(height/self.stride),size_w=int(width/self.stride), \
-                center_x=x, center_y=y, sigma=self.sigma)
+                center_x=x, center_y=y, sigma=self.sigma) #coordinate encoding
             heat_map[heat_map > 1] = 1
             heat_map[heat_map < 0.0099] = 0
             heatmap[:, :, i + 1] = heat_map
@@ -247,15 +248,16 @@ class LSP_Data(data.Dataset):
         centermap = Mytransforms.to_tensor(centermap)
         # limbsMap  = Mytransforms.to_tensor(limbsMap)
         box       = Mytransforms.to_tensor(box)
-        return img, heatmap, centermap, img_path #, 0, box
+        return img, heatmap, centermap, img_path, self.center_list, self.scale_list  #, 0, box
 
 
     def __len__(self):
         return len(self.img_list)
 
+
 if __name__ == "__main__":
 
-    img, heatmap, centermap, img_path = LSP_Data('lsp', './data/train',\
+    img, heatmap, centermap, img_path,_,_ = LSP_Data('lsp', './data/train',\
         3, 8, transformer=Mytransforms.Compose([Mytransforms.RandomHorizontalFlip(),])).__getitem__(0)
     # print(img.size()) 3,368,368,
     hm = torch.zeros((heatmap.shape[1],heatmap.shape[2])) #46,46
@@ -266,9 +268,7 @@ if __name__ == "__main__":
     img = img.numpy().transpose(1,2,0)
     heatmap[heatmap < 0] = 0
     new = cv2.applyColorMap(np.uint8(255*heatmap[:,:,0]), cv2.COLORMAP_JET)
-    print(new.shape)
     # new = cv2.resize(new,(368,368))
-    print(new.shape, img.shape)
     new = cv2.addWeighted(np.uint8(img), 0.6,new, 0.4, 0)
     plt.imsave('hm.png',new)
     plt.imshow(img)

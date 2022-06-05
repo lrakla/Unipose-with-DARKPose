@@ -7,6 +7,14 @@ import numbers
 import collections
 import cv2
 
+
+def transform_preds(coords, center, scale, output_size):
+    target_coords = np.zeros(coords.shape)
+    trans = get_affine_transform(center, scale, 0, output_size, inv=1)
+    for p in range(coords.shape[0]):
+        target_coords[p, 0:2] = affine_transform(coords[p, 0:2], trans)
+    return target_coords
+    
 def normalize(tensor, mean, std):
     """Normalize a ``torch.tensor``
     Args:
