@@ -206,7 +206,7 @@ class Trainer(object):
 			img_path = './data/train/images/im0001.jpg'
 
 			center   = [184, 184]
-
+			
 			img  = np.array(cv2.resize(cv2.imread(img_path),(368,368)), dtype=np.float32)
 			img  = img.transpose(2, 0, 1)
 			img  = torch.from_numpy(img)
@@ -222,9 +222,9 @@ class Trainer(object):
 			input_var   = img.to(device=device)
 
 			heat = self.model(input_var)
-
+			print("What does model return ..", heat.shape)
 			heat = F.interpolate(heat, size=input_var.size()[2:], mode='bilinear', align_corners=True)
-
+			#DARK should refine this right?
 			kpts = get_kpts(heat, img_h=368.0, img_w=368.0)
 			draw_paint(img_path, kpts, idx, epoch, self.model_arch, self.dataset)
 
@@ -239,7 +239,7 @@ class Trainer(object):
 			heatmap = []
 			for i in range(self.numClasses+1):
 				heatmap = cv2.applyColorMap(np.uint8(255*heat[:,:,i]), cv2.COLORMAP_JET)
-				im_heat  = cv2.addWeighted(im, 0.6, heatmap, 0.4, 0)
+				im_heat  = cv2.addWeighted(im, 0.4, heatmap, 0.6, 0)
 				cv2.imwrite('unipose'+str(i)+'.png', im_heat)
 		
 parser = argparse.ArgumentParser()
@@ -267,7 +267,7 @@ elif args.dataset == 'MPII':
 trainer = Trainer(args)
 # for epoch in range(starter_epoch, epochs):
 # 	trainer.training(epoch)
-trainer.validation()
+#trainer.validation()
 	
 # Uncomment for inference, demo, and samples for the trained model:
 trainer.test(0)
