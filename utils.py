@@ -138,6 +138,8 @@ def draw_paint(img_path, kpts, mapNumber, epoch, model_arch, dataset):
         # kpts[13][1] = kpts[13][1] + 50
 
     im = cv2.resize(cv2.imread(img_path),(368,368))
+    print(len(kpts))
+    kpts = np.array(kpts).astype(int)
     # draw points
     for k in kpts:
         x = k[0]

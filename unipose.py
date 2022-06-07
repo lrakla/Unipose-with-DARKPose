@@ -22,7 +22,7 @@ from utils import AverageMeter         as AverageMeter
 from utils import draw_paint           as draw_paint
 import evaluate             as evaluate
 from utils import get_kpts             as get_kpts
-
+import LSP_Data
 from model.unipose import unipose
 
 from tqdm import tqdm
@@ -202,10 +202,7 @@ class Trainer(object):
 
 		for idx in range(1):
 			print(idx,"/",2000)
-			img_path = './test_unipose.jpg'
-
-			center   = [184, 184]
-			
+			img_path = './data/test/images/im1889.jpg'			
 			img  = np.array(cv2.resize(cv2.imread(img_path),(368,368)), dtype=np.float32)
 			img  = img.transpose(2, 0, 1)
 			img  = torch.from_numpy(img)
@@ -223,11 +220,17 @@ class Trainer(object):
 			heat = self.model(input_var)
 			print("What does model return ..", heat.shape)
 			heat = F.interpolate(heat, size=input_var.size()[2:], mode='bilinear', align_corners=True)
-			#DARK should refine this right?
+			
+			#DARK enhancement
 			kpts = get_kpts(heat, img_h=368.0, img_w=368.0)
+			print('original kpts',len(kpts))
+			center,scale = LSP_Data.get_center_scale(368.0,368.0,kpts)
+			heat = heat.detach().cpu().numpy()
+			modified_coords,_ = evaluate.get_final_preds_darkpose(heat,center,scale)
+			kpts = modified_coords[0]
+
 			draw_paint(img_path, kpts, idx, epoch, self.model_arch, self.dataset)
 
-			heat = heat.detach().cpu().numpy()
 
 			heat = heat[0].transpose(1,2,0)
 			heat[heat < 0] = 0
@@ -257,7 +260,8 @@ if args.dataset == 'LSP':
 	args.train_dir  = './data/train'
 	args.val_dir    = './data/val'
 	#args.pretrained = None
-	args.pretrained = 'model_best.pth.tar'
+	# args.pretrained = 'model_best.pth.tar'
+	args.pretrained = 'UniPose_LSP.tar'
 	args.DARK = False #change this to just run unipose
 elif args.dataset == 'MPII':
 	args.train_dir  = '/PATH/TO/MPIII/TRAIN'
@@ -270,7 +274,7 @@ trainer = Trainer(args)
 # 	training_loss[epoch] = train_loss
 # np.save('training_loss.npy',training_loss)
 	
-trainer.validation()
+# trainer.validation()
 	
 # Uncomment for inference, demo, and samples for the trained model:
-# trainer.test(0)
+trainer.test(0)

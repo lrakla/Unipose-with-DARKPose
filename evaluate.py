@@ -55,6 +55,7 @@ def get_max_preds(batch_heatmaps):
 	pred_mask    = pred_mask.astype(np.float32)
 
 	preds *= pred_mask
+	# print(preds.shape)
 
 	return preds, maxvals
 
@@ -78,6 +79,7 @@ def taylor(hm, coord):
 			offset = np.squeeze(np.array(offset.T), axis=0)
 			coord += offset
 	return coord
+
 def gaussian_blur_darkpose(hm, kernel):
 	border = (kernel - 1) // 2
 	batch_size = hm.shape[0]
@@ -93,9 +95,13 @@ def gaussian_blur_darkpose(hm, kernel):
 			hm[i,j] = dr[border: -border, border: -border].copy()
 			hm[i,j] *= origin_max / np.max(hm[i,j])
 	return hm
+
 def get_final_preds_darkpose(hm, center, scale):
-	center = [center[0].data[0].item(), center[1].data[0].item()]
+	# print(center.shape)
+	# center = [center[0].data[0].item(), center[1].data[0].item()]
+	center = [center[0].item(), center[1].item()]
 	coords, maxvals = get_max_preds(hm)
+	# print(coords.shape)
 	heatmap_height = hm.shape[2]
 	heatmap_width = hm.shape[3]
 
@@ -126,7 +132,7 @@ def accuracy(output, target, thr_PCK, thr_PCKh, dataset, center, scale,DARK= Fal
 	norm = 1.0
 
 	if hm_type == 'gaussian':
-		if DARK:
+		if not DARK:
 			pred, _   = get_max_preds(output)
 			target, _ = get_max_preds(target)
 		else:

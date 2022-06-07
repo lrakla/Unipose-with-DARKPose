@@ -1,5 +1,6 @@
 # -*-coding:UTF-8-*-
 import os
+from re import I
 import scipy.io
 import numpy as np
 import glob
@@ -20,6 +21,7 @@ def read_data_file(root_dir):
         return: image list: train or val images list
     """
     image_arr = np.array(glob.glob(os.path.join(root_dir, 'images/*.jpg')))
+    # print(os.path.join(root_dir, 'images/*.jpg'))
     image_nums_arr = np.array([float(s.rsplit('/')[-1][2:-4]) for s in image_arr])
     sorted_image_arr = image_arr[np.argsort(image_nums_arr)]
     return sorted_image_arr.tolist()
@@ -42,6 +44,7 @@ def read_mat_file(mode, root_dir, img_list,val):
         mat_arr[2] = np.logical_not(mat_arr[2]) #joints
         lms = mat_arr.transpose([2, 0, 1])  #1000,3,14
         kpts = mat_arr.transpose([2, 1, 0]).tolist() 
+    # print(lms.shape[0])
     center_list = []
     scale_list = []
     for idx in range(lms.shape[0]):
@@ -59,6 +62,18 @@ def read_mat_file(mode, root_dir, img_list,val):
                 lms[idx][1][lms[idx][1] > 0].min() + 4) / 368.0
         scale_list.append(scale)
     return kpts, center_list, scale_list
+
+def get_center_scale(h,w,kpts):
+    lms = torch.tensor(kpts).transpose(0,1)
+    center_x = (lms[0][lms[0] < w].max() +
+                    lms[0][lms[0] > 0].min()) / 2
+    center_y = (lms[1][lms[1] < h].max() +
+                    lms[1][lms[1] > 0].min()) / 2
+    center = [center_x, center_y]
+
+    scale = (lms[1][lms[1] < h].max() -
+                lms[1][lms[1] > 0].min() + 4) / 368.0
+    return center, scale
 
 
 def guassian_kernel(size_w, size_h, center_x, center_y, sigma):
@@ -196,6 +211,7 @@ class LSP_Data(data.Dataset):
 
         self.img_list    = read_data_file(root_dir)
         self.val = val
+        # print(root_dir)
         # print(len(self.img_list),root_dir)
         self.kpt_list, self.center_list, self.scale_list = read_mat_file(mode, root_dir, self.img_list, val)
         self.stride      = stride
