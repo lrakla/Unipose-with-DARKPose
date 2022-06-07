@@ -58,7 +58,6 @@ def read_mat_file(mode, root_dir, img_list,val):
         scale = (lms[idx][1][lms[idx][1] < h].max() -
                 lms[idx][1][lms[idx][1] > 0].min() + 4) / 368.0
         scale_list.append(scale)
-
     return kpts, center_list, scale_list
 
 

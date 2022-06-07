@@ -134,6 +134,7 @@ class Trainer(object):
 
 			if i == 10000:
 				break
+		return train_loss
 
 	def validation(self):
 		self.model.eval()
@@ -147,7 +148,6 @@ class Trainer(object):
 
 		cnt = 0
 		for i, (input, heatmap, centermap, img_path,center,scale) in enumerate(tbar):
-
 			cnt += 1
 
 			input_var     =      input.to(device=device)
@@ -160,9 +160,8 @@ class Trainer(object):
 			val_loss += loss_heat.item()
 
 			tbar.set_description('Val   loss: %.6f' % (val_loss / ((i + 1)*self.batch_size)))
-
 			acc, acc_PCK, acc_PCKh, cnt, pred, visible = evaluate.accuracy(heat.detach().cpu().numpy(),\
-				 heatmap_var.detach().cpu().numpy(),0.2,0.5, self.dataset,center, scale, self.DARK )
+				 heatmap_var.detach().cpu().numpy(),0.2,0.5, self.dataset,center[i], scale[i], self.DARK )
 
 			AP[0]     = (AP[0]  *i + acc[0])      / (i + 1)
 			PCK[0]    = (PCK[0] *i + acc_PCK[0])  / (i + 1)
@@ -203,7 +202,7 @@ class Trainer(object):
 
 		for idx in range(1):
 			print(idx,"/",2000)
-			img_path = './data/train/images/im0001.jpg'
+			img_path = './test_unipose.jpg'
 
 			center   = [184, 184]
 			
@@ -251,23 +250,27 @@ parser.add_argument('--model_name', default='model', type=str)
 parser.add_argument('--model_arch', default='unipose', type=str)
 parser.add_argument('--DARK', default='False', type=bool)
 starter_epoch =    0
-epochs        =  1 #100
+epochs        =  10 #100
 args = parser.parse_args()
 
 if args.dataset == 'LSP':
 	args.train_dir  = './data/train'
 	args.val_dir    = './data/val'
 	#args.pretrained = None
-	args.pretrained = './data/weights.tar'
-	args.DARK = True  #change this to just run unipose
+	args.pretrained = 'model_best.pth.tar'
+	args.DARK = False #change this to just run unipose
 elif args.dataset == 'MPII':
 	args.train_dir  = '/PATH/TO/MPIII/TRAIN'
 	args.val_dir    = '/PATH/TO/MPIII/VAL'
 
 trainer = Trainer(args)
+# training_loss = np.zeros(epochs)
 # for epoch in range(starter_epoch, epochs):
-# 	trainer.training(epoch)
-#trainer.validation()
+# 	train_loss = trainer.training(epoch)
+# 	training_loss[epoch] = train_loss
+# np.save('training_loss.npy',training_loss)
+	
+trainer.validation()
 	
 # Uncomment for inference, demo, and samples for the trained model:
-trainer.test(0)
+# trainer.test(0)
