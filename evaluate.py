@@ -98,32 +98,26 @@ def gaussian_blur_darkpose(hm, kernel):
 
 def get_final_preds_darkpose(hm, center, scale):
 	# print(center.shape)
-	# center = [center[0].data[0].item(), center[1].data[0].item()]
-	center = [center[0].item(), center[1].item()]
-	coords, maxvals = get_max_preds(hm)
-	# print(coords.shape)
-	heatmap_height = hm.shape[2]
-	heatmap_width = hm.shape[3]
-
+	#center = [center[0].item(), center[1].item()]
+	coords, maxvals = get_max_preds(hm) #coords 8,15,2
+	#print(hm.shape) #1,15,46,46
 	# post-processing
 	hm = gaussian_blur_darkpose(hm, 11)
 	hm = np.maximum(hm, 1e-10)
 	hm = np.log(hm)
-	for n in range(coords.shape[0]):
-		for p in range(coords.shape[1]):
-			coords[n,p] = taylor(hm[n][p], coords[n][p])
+	for n in range(coords.shape[0]): #batch
+			for p in range(coords.shape[1]): #joint
+				coords[n,p] = taylor(hm[n][p], coords[n][p])
 
 	preds = coords.copy()
-
 	# Transform back
-	for i in range(coords.shape[0]):
-		# preds[i] = transform_preds(
-		# 	coords[i], center[i], scale[i], [heatmap_width, heatmap_height]
-		# )
-		preds[i] = transform_preds(
-			coords[i], center, scale, [heatmap_width, heatmap_height]
-		)
-
+	# for i in range(coords.shape[0]):
+	# 	# preds[i] = transform_preds(
+	# 	# 	coords[i], center[i], scale[i], [heatmap_width, heatmap_height]
+	# 	# )
+	# 	preds[i] = transform_preds(
+	# 		coords[i], center, scale, [heatmap_width, heatmap_height]
+	# 	)
 	return preds, maxvals
 
 def accuracy(output, target, thr_PCK, thr_PCKh, dataset, center, scale,DARK= False,hm_type='gaussian', threshold=0.5):
@@ -138,7 +132,6 @@ def accuracy(output, target, thr_PCK, thr_PCKh, dataset, center, scale,DARK= Fal
 		else:
 			pred, _   = get_final_preds_darkpose(output,center,scale)
 			target, _ = get_final_preds_darkpose(target,center,scale)
-
 		h         = output.shape[2]
 		w         = output.shape[3]
 		norm      = np.ones((pred.shape[0], 2)) * np.array([h,w]) / 10
@@ -170,20 +163,20 @@ def accuracy(output, target, thr_PCK, thr_PCKh, dataset, center, scale,DARK= Fal
 
 	if dataset == "LSP":
 		headLength = np.linalg.norm(target[0,14,:] - target[0,13,:])
-	elif dataset == "COCO":
-		headLength = np.linalg.norm(target[0,4,:] - target[0,5,:])
-	elif dataset == "Penn_Action":
-		neck = [(target[0,1,0]+target[0,2,0])/2, (target[0,1,1]+target[0,2,1])/2]
-		headLength = np.linalg.norm(target[0,0,:] - neck)
-	elif dataset == "NTID":
-		headLength = 2*(np.linalg.norm(target[0,4,:] - target[0,3,:]))
-	elif dataset == "PoseTrack":
-		headLength = 2*(np.linalg.norm(target[0,1,:] - target[0,2,:]))
-	elif dataset == "BBC":
-		neck = [(target[0,6,0]+target[0,7,0])/2, (target[0,6,1]+target[0,7,1])/2]
-		headLength = np.linalg.norm(target[0,1,:] - neck)
-	elif dataset == "MPII":
-		headLength = np.linalg.norm(target[0,9,:] - target[0,10,:])
+	# elif dataset == "COCO":
+	# 	headLength = np.linalg.norm(target[0,4,:] - target[0,5,:])
+	# elif dataset == "Penn_Action":
+	# 	neck = [(target[0,1,0]+target[0,2,0])/2, (target[0,1,1]+target[0,2,1])/2]
+	# 	headLength = np.linalg.norm(target[0,0,:] - neck)
+	# elif dataset == "NTID":
+	# 	headLength = 2*(np.linalg.norm(target[0,4,:] - target[0,3,:]))
+	# elif dataset == "PoseTrack":
+	# 	headLength = 2*(np.linalg.norm(target[0,1,:] - target[0,2,:]))
+	# elif dataset == "BBC":
+	# 	neck = [(target[0,6,0]+target[0,7,0])/2, (target[0,6,1]+target[0,7,1])/2]
+	# 	headLength = np.linalg.norm(target[0,1,:] - neck)
+	# elif dataset == "MPII":
+	# 	headLength = np.linalg.norm(target[0,9,:] - target[0,10,:])
 
 
 	for i in range(len(idx)):

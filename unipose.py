@@ -5,6 +5,7 @@ import torch.optim
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
 import sys
+import csv
 import numpy as np
 import cv2
 import math
@@ -83,7 +84,6 @@ class Trainer(object):
 		if self.args.pretrained is not None:
 			checkpoint = torch.load(self.args.pretrained,map_location=device)
 			p = checkpoint['state_dict']
-
 			state_dict = self.model.state_dict()
 			model_dict = {}
 
@@ -136,7 +136,7 @@ class Trainer(object):
 				break
 		return train_loss
 
-	def validation(self):
+	def validation(self,epoch):
 		self.model.eval()
 		tbar = tqdm(self.val_loader, desc='\r')
 		val_loss = 0.0
@@ -147,7 +147,7 @@ class Trainer(object):
 		count = np.zeros(self.numClasses+1)
 
 		cnt = 0
-		for i, (input, heatmap, centermap, img_path,center,scale) in enumerate(tbar):
+		for i, (input, heatmap, _, _,center,scale) in enumerate(tbar):
 			cnt += 1
 
 			input_var     =      input.to(device=device)
@@ -180,13 +180,14 @@ class Trainer(object):
 	
 		printAccuracies(mAP, AP, mPCKh, PCKh, mPCK, PCK, self.dataset)
 			
-		PCKhAvg = PCKh.sum()/(self.numClasses+1)
-		PCKAvg  =  PCK.sum()/(self.numClasses+1)
+		# PCKhAvg = PCKh.sum()/(self.numClasses+1)
+		# PCKAvg  =  PCK.sum()/(self.numClasses+1)
 
 		if mAP > self.isBest:
 			self.isBest = mAP
-			save_checkpoint({'state_dict': self.model.state_dict()}, self.isBest, self.args.model_name)
-			print("Model saved to ",self.args.model_name)
+			model_name = f"model{epoch}"
+			save_checkpoint({'state_dict': self.model.state_dict()}, self.isBest, model_name)
+			print("Model saved to ",model_name)
 
 		if mPCKh > self.bestPCKh:
 			self.bestPCKh = mPCKh
@@ -195,6 +196,19 @@ class Trainer(object):
 
 		print("Best AP = %.2f%%; PCK = %2.2f%%; PCKh = %2.2f%%" %
 		 (self.isBest*100, self.bestPCK*100,self.bestPCKh*100))
+		
+		metrics = {'Best_AP': self.isBest*100, 'Best_PCK': self.bestPCK*100, 'Best_PCKh': self.bestPCKh*100}
+
+		if self.DARK:
+			with open('Test_DARK_Pretrain.csv', 'w') as f:
+				for key in metrics.keys():
+					f.write("%s, %s\n" % (key, metrics[key]))
+		else:
+			with open('Test_Pretrain.csv', 'w') as f:
+				for key in metrics.keys():
+					f.write("%s, %s\n" % (key, metrics[key]))
+
+		return val_loss
 
 	def test(self,epoch):
 		self.model.eval()
@@ -202,7 +216,7 @@ class Trainer(object):
 
 		for idx in range(1):
 			print(idx,"/",2000)
-			img_path = './data/test/images/im1889.jpg'			
+			img_path = './data/val/images/im1981.jpg'			
 			img  = np.array(cv2.resize(cv2.imread(img_path),(368,368)), dtype=np.float32)
 			img  = img.transpose(2, 0, 1)
 			img  = torch.from_numpy(img)
@@ -218,18 +232,18 @@ class Trainer(object):
 			input_var   = img.to(device=device)
 
 			heat = self.model(input_var)
-			print("What does model return ..", heat.shape)
 			heat = F.interpolate(heat, size=input_var.size()[2:], mode='bilinear', align_corners=True)
 			
 			#DARK enhancement
 			kpts = get_kpts(heat, img_h=368.0, img_w=368.0)
-			print('original kpts',len(kpts))
-			center,scale = LSP_Data.get_center_scale(368.0,368.0,kpts)
 			heat = heat.detach().cpu().numpy()
-			modified_coords,_ = evaluate.get_final_preds_darkpose(heat,center,scale)
-			kpts = modified_coords[0]
-
-			draw_paint(img_path, kpts, idx, epoch, self.model_arch, self.dataset)
+			print('original kpts',kpts)
+			if self.DARK:
+				center,scale = LSP_Data.get_center_scale(368.0,368.0,kpts)	
+				modified_coords,_ = evaluate.get_final_preds_darkpose(heat,center,scale)
+				kpts = modified_coords[0][1:]
+				print("Modified",kpts)
+			draw_paint(img_path, kpts, idx, epoch, self.model_arch, self.dataset, self.DARK)
 
 
 			heat = heat[0].transpose(1,2,0)
@@ -253,28 +267,30 @@ parser.add_argument('--model_name', default='model', type=str)
 parser.add_argument('--model_arch', default='unipose', type=str)
 parser.add_argument('--DARK', default='False', type=bool)
 starter_epoch =    0
-epochs        =  10 #100
+epochs        =  1 #100
 args = parser.parse_args()
 
 if args.dataset == 'LSP':
 	args.train_dir  = './data/train'
 	args.val_dir    = './data/val'
 	#args.pretrained = None
-	# args.pretrained = 'model_best.pth.tar'
-	args.pretrained = 'UniPose_LSP.tar'
-	args.DARK = False #change this to just run unipose
+	# args.pretrained = 'model_best.pth.tar' #change to checkpoint path to resume from some place
+	args.pretrained = './data/weights.tar'
+	args.DARK = True #change this to just run unipose
 elif args.dataset == 'MPII':
 	args.train_dir  = '/PATH/TO/MPIII/TRAIN'
 	args.val_dir    = '/PATH/TO/MPIII/VAL'
 
 trainer = Trainer(args)
-# training_loss = np.zeros(epochs)
-# for epoch in range(starter_epoch, epochs):
-# 	train_loss = trainer.training(epoch)
-# 	training_loss[epoch] = train_loss
-# np.save('training_loss.npy',training_loss)
-	
-# trainer.validation()
-	
+
+training_loss = np.zeros(epochs)
+vali_loss = np.zeros(epochs)
+for epoch in range(starter_epoch, epochs):
+	train_loss = trainer.training(epoch)
+	val_loss = trainer.validation(epoch)
+	training_loss[epoch] = train_loss
+	vali_loss[epoch] = val_loss
+np.save(f'training_loss_{epochs}predark.npy',training_loss)
+np.save(f'vali_loss_{epochs}predark.npy',vali_loss)
 # Uncomment for inference, demo, and samples for the trained model:
-trainer.test(0)
+#trainer.test(0)

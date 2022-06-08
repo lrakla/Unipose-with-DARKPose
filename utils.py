@@ -102,7 +102,7 @@ def get_kpts(maps, img_h = 368.0, img_w = 368.0):
     return kpts
 
 
-def draw_paint(img_path, kpts, mapNumber, epoch, model_arch, dataset):
+def draw_paint(img_path, kpts, mapNumber, epoch, model_arch, dataset, DARK):
 
            #       RED head          GREEN           RED          YELLOW          YELLOW          PINK          GREEN
     colors = [[000,000,255], [000,255,000], [000,000,255], [255,255,000], [255,255,000], [255,000,255], [000,255,000],\
@@ -110,10 +110,6 @@ def draw_paint(img_path, kpts, mapNumber, epoch, model_arch, dataset):
            #       BLUE          YELLOW          PINK          GREEN          GREEN           RED          YELLOW           BLUE
 
     if dataset == "LSP":
-        # limbSeq = [[13, 12], [12, 9], [12, 8], [9, 10], [8, 7], [10,11], [7, 6], [12, 3],\
-        #             [12, 2], [ 2, 1], [ 1, 0], [ 3, 4], [4,  5], [15,16], [16,18], [17,18], [15,17]]
-
-
                     #head    #ls       #rs    #rbcp   #lbcp    #rfrm
         limbSeq = [[13, 12], [12, 9], [12, 8], [8, 7], [9, 10], [7, 6], \
             #lfrm    #torso      #hip?  #rthigh  #rcalf #lthigh #lcalf
@@ -138,13 +134,12 @@ def draw_paint(img_path, kpts, mapNumber, epoch, model_arch, dataset):
         # kpts[13][1] = kpts[13][1] + 50
 
     im = cv2.resize(cv2.imread(img_path),(368,368))
-    print(len(kpts))
     kpts = np.array(kpts).astype(int)
     # draw points
     for k in kpts:
         x = k[0]
         y = k[1]
-        cv2.circle(im, (x, y), radius=3, thickness=-1, color=(0, 0, 255))
+        cv2.circle(im, (x, y), radius=5, thickness=-1, color=(255, 255, 255))
 
     # draw lines
     for i in range(len(limbSeq)):
@@ -163,13 +158,16 @@ def draw_paint(img_path, kpts, mapNumber, epoch, model_arch, dataset):
 
         if X0!=0 and Y0!=0 and X1!=0 and Y1!=0:
             if i<len(limbSeq)-4:
-                cv2.line(cur_im, (Y0,X0), (Y1,X1), colors[i], 5)
+                cv2.line(cur_im, (Y0,X0), (Y1,X1), colors[i], 3)
             else:
-                cv2.line(cur_im, (Y0,X0), (Y1,X1), [0,0,255], 5)
+                cv2.line(cur_im, (Y0,X0), (Y1,X1), [0,0,255], 3)
 
         im = cv2.addWeighted(im, 0.2, cur_im, 0.8, 0)
 
-    cv2.imwrite('./pose_'+str(mapNumber)+'.png', im)
+    if DARK:
+        cv2.imwrite('./pose_dark'+str(mapNumber)+'.png', im)
+    else:
+        cv2.imwrite('./pose'+str(mapNumber)+'.png', im)
 
 
 
@@ -215,7 +213,7 @@ def getDataloader(dataset, train_dir , val_dir,sigma, stride, workers, batch_siz
         val_loader   = torch.utils.data.DataLoader(
                                             lsp_lspet_data.LSP_Data('lsp', val_dir, sigma, stride,
                                             Mytransforms.Compose([Mytransforms.TestResized(368),]),val=True),
-                                            batch_size  = 1, shuffle=True,
+                                            batch_size  = 10, shuffle=True,
                                             num_workers = 1, pin_memory=True)
 
         test_loader  = 0
