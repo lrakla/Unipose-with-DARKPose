@@ -185,7 +185,7 @@ class Trainer(object):
 
 		if mAP > self.isBest:
 			self.isBest = mAP
-			model_name = f"model{epoch}"
+			model_name = f"model{epoch}_scratchdark"
 			save_checkpoint({'state_dict': self.model.state_dict()}, self.isBest, model_name)
 			print("Model saved to ",model_name)
 
@@ -200,11 +200,11 @@ class Trainer(object):
 		metrics = {'Best_AP': self.isBest*100, 'Best_PCK': self.bestPCK*100, 'Best_PCKh': self.bestPCKh*100}
 
 		if self.DARK:
-			with open('Test_DARK_Pretrain.csv', 'w') as f:
+			with open('./results/Test_DARK_scratchtrain.csv', 'w') as f:
 				for key in metrics.keys():
 					f.write("%s, %s\n" % (key, metrics[key]))
 		else:
-			with open('Test_Pretrain.csv', 'w') as f:
+			with open('./results/Test_scratchtrain.csv', 'w') as f:
 				for key in metrics.keys():
 					f.write("%s, %s\n" % (key, metrics[key]))
 
@@ -256,7 +256,7 @@ class Trainer(object):
 			for i in range(self.numClasses+1):
 				heatmap = cv2.applyColorMap(np.uint8(255*heat[:,:,i]), cv2.COLORMAP_JET)
 				im_heat  = cv2.addWeighted(im, 0.4, heatmap, 0.6, 0)
-				cv2.imwrite('unipose'+str(i)+'.png', im_heat)
+				cv2.imwrite('./figures/unipose'+str(i)+'.png', im_heat)
 		
 parser = argparse.ArgumentParser()
 parser.add_argument('--pretrained', default=None,type=str, dest='pretrained')
@@ -267,15 +267,15 @@ parser.add_argument('--model_name', default='model', type=str)
 parser.add_argument('--model_arch', default='unipose', type=str)
 parser.add_argument('--DARK', default='False', type=bool)
 starter_epoch =    0
-epochs        =  1 #100
+epochs        =  20 #100
 args = parser.parse_args()
 
 if args.dataset == 'LSP':
 	args.train_dir  = './data/train'
 	args.val_dir    = './data/val'
-	#args.pretrained = None
-	# args.pretrained = 'model_best.pth.tar' #change to checkpoint path to resume from some place
-	args.pretrained = './data/weights.tar'
+	#args.pretrained = 'model9_nodark_best.pth.tar'
+	args.pretrained = None #change to checkpoint path to resume from some place
+	#args.pretrained = './data/weights.tar'
 	args.DARK = True #change this to just run unipose
 elif args.dataset == 'MPII':
 	args.train_dir  = '/PATH/TO/MPIII/TRAIN'
@@ -290,7 +290,7 @@ for epoch in range(starter_epoch, epochs):
 	val_loss = trainer.validation(epoch)
 	training_loss[epoch] = train_loss
 	vali_loss[epoch] = val_loss
-np.save(f'training_loss_{epochs}predark.npy',training_loss)
-np.save(f'vali_loss_{epochs}predark.npy',vali_loss)
+np.save(f'./results/training_loss_{epochs}scratchdark.npy',training_loss)
+np.save(f'./results/vali_loss_{epochs}scratchdark.npy',vali_loss)
 # Uncomment for inference, demo, and samples for the trained model:
 #trainer.test(0)

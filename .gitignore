@@ -1,3 +1,7 @@
 data/
 __pycache__/
-model_best.pth.tar
+model3_best.pth.tar
+model10_nodark_best.pth.tar
+model18_scratchdark_best.pth.tar
+figures/
+results/

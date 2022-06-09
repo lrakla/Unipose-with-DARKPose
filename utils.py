@@ -165,9 +165,9 @@ def draw_paint(img_path, kpts, mapNumber, epoch, model_arch, dataset, DARK):
         im = cv2.addWeighted(im, 0.2, cur_im, 0.8, 0)
 
     if DARK:
-        cv2.imwrite('./pose_dark'+str(mapNumber)+'.png', im)
+        cv2.imwrite('./figures/pose_dark'+str(mapNumber)+'.png', im)
     else:
-        cv2.imwrite('./pose'+str(mapNumber)+'.png', im)
+        cv2.imwrite('./figures/pose'+str(mapNumber)+'.png', im)
 
 
 
