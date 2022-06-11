@@ -67,7 +67,7 @@ class Trainer(object):
 		elif self.dataset == "MPII":
 			self.numClasses  = 16
 		self.train_loader, self.val_loader = getDataloader(self.dataset, self.train_dir,\
-			self.val_dir, self.sigma, self.stride, self.workers, self.batch_size)
+			self.val_dir, self.sigma, self.stride, self.workers, self.batch_size,self.DARK)
 
 		model = unipose(self.dataset, num_classes=self.numClasses,backbone='resnet',output_stride=16,sync_bn=True,freeze_bn=False, stride=self.stride)
 
@@ -216,7 +216,8 @@ class Trainer(object):
 
 		for idx in range(1):
 			print(idx,"/",2000)
-			img_path = './data/val/images/im1981.jpg'			
+			img_name = 'im1031'
+			img_path = './data/val/images/' + img_name + '.jpg'		#1031,1987,1226
 			img  = np.array(cv2.resize(cv2.imread(img_path),(368,368)), dtype=np.float32)
 			img  = img.transpose(2, 0, 1)
 			img  = torch.from_numpy(img)
@@ -243,7 +244,7 @@ class Trainer(object):
 				modified_coords,_ = evaluate.get_final_preds_darkpose(heat,center,scale)
 				kpts = modified_coords[0][1:]
 				print("Modified",kpts)
-			draw_paint(img_path, kpts, idx, epoch, self.model_arch, self.dataset, self.DARK)
+			draw_paint(img_path, kpts, img_name, epoch, self.model_arch, self.dataset, self.DARK)
 
 
 			heat = heat[0].transpose(1,2,0)
@@ -267,15 +268,15 @@ parser.add_argument('--model_name', default='model', type=str)
 parser.add_argument('--model_arch', default='unipose', type=str)
 parser.add_argument('--DARK', default='False', type=bool)
 starter_epoch =    0
-epochs        =  20 #100
+epochs        =  5 #100
 args = parser.parse_args()
 
 if args.dataset == 'LSP':
 	args.train_dir  = './data/train'
 	args.val_dir    = './data/val'
 	#args.pretrained = 'model9_nodark_best.pth.tar'
-	args.pretrained = None #change to checkpoint path to resume from some place
-	#args.pretrained = './data/weights.tar'
+	# args.pretrained = None #change to checkpoint path to resume from some place
+	args.pretrained = './data/weights.tar'
 	args.DARK = True #change this to just run unipose
 elif args.dataset == 'MPII':
 	args.train_dir  = '/PATH/TO/MPIII/TRAIN'
@@ -283,14 +284,17 @@ elif args.dataset == 'MPII':
 
 trainer = Trainer(args)
 
-training_loss = np.zeros(epochs)
-vali_loss = np.zeros(epochs)
-for epoch in range(starter_epoch, epochs):
-	train_loss = trainer.training(epoch)
-	val_loss = trainer.validation(epoch)
-	training_loss[epoch] = train_loss
-	vali_loss[epoch] = val_loss
-np.save(f'./results/training_loss_{epochs}scratchdark.npy',training_loss)
-np.save(f'./results/vali_loss_{epochs}scratchdark.npy',vali_loss)
+# training_loss = np.zeros(epochs)
+# vali_loss = np.zeros(epochs)
+# val_loss = trainer.validation(0)
+# for epoch in range(starter_epoch, epochs):
+# 	train_loss = trainer.training(epoch)
+# 	val_loss = trainer.validation(epoch)
+# 	training_loss[epoch] = train_loss
+# 	vali_loss[epoch] = val_loss
+# np.save(f'./results/training_loss_{epochs}scratchdark.npy',training_loss)
+# np.save(f'./results/vali_loss_{epochs}scratchdark.npy',vali_loss)
+# np.save(f'./results/vali_loss_without_decoder.npy',vali_loss)
+
 # Uncomment for inference, demo, and samples for the trained model:
-#trainer.test(0)
+trainer.test(0)

@@ -202,17 +202,17 @@ def get_max_preds(batch_heatmaps):
     return preds, maxvals
 
 
-def getDataloader(dataset, train_dir , val_dir,sigma, stride, workers, batch_size):
+def getDataloader(dataset, train_dir , val_dir,sigma, stride, workers, batch_size,DARK):
     if dataset == 'LSP':
         train_loader = torch.utils.data.DataLoader(
                                             lsp_lspet_data.LSP_Data('lsp', train_dir, sigma, stride,
-                                            Mytransforms.Compose([Mytransforms.RandomHorizontalFlip(),])),
+                                            Mytransforms.Compose([Mytransforms.RandomHorizontalFlip(),]),DARK=DARK),
                                             batch_size  = batch_size, shuffle=True,
                                             num_workers = workers, pin_memory=True)   
     
         val_loader   = torch.utils.data.DataLoader(
                                             lsp_lspet_data.LSP_Data('lsp', val_dir, sigma, stride,
-                                            Mytransforms.Compose([Mytransforms.TestResized(368),]),val=True),
+                                            Mytransforms.Compose([Mytransforms.TestResized(368),]),val=True,DARK=DARK),
                                             batch_size  = 10, shuffle=True,
                                             num_workers = 1, pin_memory=True)
 

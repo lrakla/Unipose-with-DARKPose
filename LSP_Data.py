@@ -207,10 +207,11 @@ class LSP_Data(data.Dataset):
         13 = Head  Top
     """
 
-    def __init__(self, mode, root_dir, sigma, stride, transformer=None, val=False):
+    def __init__(self, mode, root_dir, sigma, stride, transformer=None, val=False,DARK=True):
 
         self.img_list    = read_data_file(root_dir)
         self.val = val
+        self.DARK = DARK
         # print(root_dir)
         # print(len(self.img_list),root_dir)
         self.kpt_list, self.center_list, self.scale_list = read_mat_file(mode, root_dir, self.img_list, val)
@@ -243,6 +244,10 @@ class LSP_Data(data.Dataset):
             # resize from 368 to 46
             x = kpt[i][0] / self.stride
             y = kpt[i][1] / self.stride
+            if not self.DARK:
+                x = int(x)*1.0
+                y = int(y)*1.0
+
             heat_map = guassian_kernel(size_h=int(height/self.stride),size_w=int(width/self.stride), \
                 center_x=x, center_y=y, sigma=self.sigma) #coordinate encoding
             heat_map[heat_map > 1] = 1
@@ -273,7 +278,7 @@ class LSP_Data(data.Dataset):
 if __name__ == "__main__":
 
     img, heatmap, centermap, img_path,_,_ = LSP_Data('lsp', './data/train',\
-        3, 8, transformer=Mytransforms.Compose([Mytransforms.RandomHorizontalFlip(),])).__getitem__(0)
+        3, 8, transformer=Mytransforms.Compose([Mytransforms.RandomHorizontalFlip(),]),DARK=True).__getitem__(0)
     # print(img.size()) 3,368,368,
     hm = torch.zeros((heatmap.shape[1],heatmap.shape[2])) #46,46
     heatmap = torch.reshape(heatmap,(1,heatmap.shape[0],heatmap.shape[1],heatmap.shape[2]))
